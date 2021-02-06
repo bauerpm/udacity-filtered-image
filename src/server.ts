@@ -67,6 +67,23 @@ import * as util from './util/util';
     }
   })
 
+  // route to get image from public url, filter it, save to disk, then erase from disk.
+  // get /filteredimage?image_url={{URL}}
+  //route to get a specific image from s3 bucket
+  app.get( "/filteredimage/:file_name", async (req: Request, res: Response) => {
+    const { file_name } = req.params;
+    try {
+      if(!file_name) {
+        return res.status(400).send('File name is required to download image')
+      }
+      const response:string = await util.downloadFromS3(file_name)
+  
+      res.status(200).send(response)
+    } catch (error) {
+      res.status(400).send(error)
+    }
+  })
+
 
 
   // Start the Server
