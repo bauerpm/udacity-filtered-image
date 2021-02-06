@@ -69,22 +69,18 @@ import * as util from './util/util';
 
   // route to get image from public url, filter it, save to disk, then erase from disk.
   // get /filteredimage?image_url={{URL}}
-  app.get("/filteredimage", async (req: Request, res: Response) => {
-    const image_url  = req.query.image_url as string;
-
-    if (!image_url) {
-      return res.status(400).send('request must have contain a query string ?image_url={{URL}}')
-    }
-    const isValidUrl: boolean = util.validURL(image_url)
-    if(!isValidUrl) {
-      return res.status(400).send('Invalid Url')
-    }
+  //route to get a specific image from s3 bucket
+  app.get( "/filteredimage/:file_name", async (req: Request, res: Response) => {
+    const { file_name } = req.params;
     try {
-      const filteredPath = await util.filterImageFromURL(image_url)
-      util.deleteLocalFiles([filteredPath])
-      res.status(200).send(filteredPath)
+      if(!file_name) {
+        return res.status(400).send('File name is required to download image')
+      }
+      const response:string = await util.downloadFromS3(file_name)
+  
+      res.status(200).send(response)
     } catch (error) {
-      res.status(500).send({error, message: 'There was a problem filtering or saving your file. Make sure the image url provided is valid.'})
+      res.status(400).send(error)
     }
   })
 
