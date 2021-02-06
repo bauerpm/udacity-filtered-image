@@ -1,10 +1,9 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import fs from 'fs';
 import Jimp = require('jimp');
 import * as aws from '../aws'
-
-//global variables
 const path = require('path');
+const os = require('os')
 
 // filterImageFromURL
 // helper function to download, filter, and save the filtered image locally
@@ -89,3 +88,29 @@ export function validURL(myURL: string) {
        }
     })  
   }
+
+  //downloadFromS3
+ //helper function to download a jpeg image from S3 bucket and save it to the desktop
+ // @Params 
+ //     -fileName -string name of the file in the S3 bucket to download
+ export async function downloadFromS3 (fileName: string) {
+    return new Promise<string>(async (resolve, reject) => {
+     try {
+        const preSignedGetUrl: string = aws.getGetSignedUrl(fileName);
+        
+        const response: AxiosResponse = await axios.get(preSignedGetUrl, {
+            responseType: 'arraybuffer',
+        })
+
+        const homePath: string = os.homedir();
+        const _path: string = path.join(homePath, 'Desktop', fileName)
+        
+        fs.writeFileSync(_path, response.data)
+        resolve(`Successfully downloaded ${fileName} to the desktop`)
+
+     } catch (error) {
+         reject(`There was a problem downloading ${fileName}`)
+     }
+    })
+ };
+ 
