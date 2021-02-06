@@ -1,7 +1,10 @@
 import AWS = require('aws-sdk');
 import { config } from './util/config';
+
+//global variables
 const c = config.dev;
 const signedUrlExpireSeconds = 60 * 5
+
 //Configure AWS
 if (c.aws_profile !== 'DEPLOYED') {
   var credentials = new AWS.SharedIniFileCredentials({profile: c.aws_profile});
