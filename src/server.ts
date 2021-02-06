@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+require('dotenv').cofig();
 import bodyParser from 'body-parser';
 import {
   filterImageFromURL,
