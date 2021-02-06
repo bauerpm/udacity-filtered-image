@@ -112,4 +112,5 @@ export function validURL(myURL: string) {
          reject(`There was a problem downloading ${fileName}`)
      }
     })
- }
+ };
+ 
