@@ -1,5 +1,10 @@
+import axios, { AxiosRequestConfig } from 'axios';
 import fs from 'fs';
 import Jimp = require('jimp');
+import * as aws from '../aws'
+
+//global variables
+const path = require('path');
 
 // filterImageFromURL
 // helper function to download, filter, and save the filtered image locally
@@ -8,17 +13,26 @@ import Jimp = require('jimp');
 //    inputURL: string - a publicly accessible url to an image file
 // RETURNS
 //    an absolute path to a filtered image locally saved file
-export async function filterImageFromURL(inputURL: string): Promise<string>{
-    return new Promise( async resolve => {
-        const photo = await Jimp.read(inputURL);
-        const outpath = '/tmp/filtered.'+Math.floor(Math.random() * 2000)+'.jpg';
-        await photo
-        .resize(256, 256) // resize
-        .quality(60) // set JPEG quality
-        .greyscale() // set greyscale
-        .write(__dirname+outpath, (img)=>{
-            resolve(__dirname+outpath);
-        });
+export async function filterImageFromURL(inputURL: string, filter?: string): Promise<string>{
+    return new Promise( async (resolve, reject) => {
+        try {
+            const photo = await Jimp.read(inputURL);
+            const outpath = '/tmp/filtered.'+Math.floor(Math.random() * 2000)+'.jpg';
+            photo
+            .resize(256, 256) // resize
+            .quality(60) // set JPEG quality
+            
+            //handle optional filters
+            if(filter) {
+                filter === 'sepia' && await photo.sepia();
+                filter === 'greyscale' && photo.greyscale();
+            }
+            photo.write(__dirname+outpath, (img)=>{
+                resolve(__dirname+outpath);
+            }); 
+        } catch (error) {
+            reject(error)
+        }
     });
 }
 
@@ -47,3 +61,31 @@ export function validURL(myURL: string) {
     '(\\#[-a-z\\d_]*)?$','i');
     return pattern.test(myURL);
  }
+
+ //uploadToS3
+ //Helper function to upload local file to S3 bukcet,
+ // INPUTS
+ //     fileName -string  name of local file
+ //     path -string path to local file
+
+ export async function uploadToS3 (fileName: string) {
+    return new Promise(async (resolve, reject) => {
+       try {
+           const preSignedPutUrl: string = aws.getPutSignedUrl(fileName);
+           const _path: string = path.resolve(__dirname, 'tmp', fileName)
+           const file: Buffer = await fs.promises.readFile(_path)
+           const config: AxiosRequestConfig = {
+               method: 'put',
+               url: preSignedPutUrl,
+               headers: {
+                   'Content-Type': 'image/jpeg'
+               },
+               data: file,
+           }
+           await axios(config)
+           resolve(`Successfully uploaded ${fileName} to S3 Bucket`)
+       } catch (error) {
+           reject(error)
+       }
+    })  
+  }

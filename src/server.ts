@@ -1,11 +1,8 @@
 import express, { Request, Response } from 'express';
-require('dotenv').cofig();
+require('dotenv').config();
 import bodyParser from 'body-parser';
-import {
-  filterImageFromURL,
-  deleteLocalFiles,
-  validURL,
-} from './util/util';
+import * as util from './util/util';
+
 
 (async () => {
 
@@ -32,18 +29,45 @@ import {
     if (!image_url) {
       return res.status(400).send('request must have contain a query string ?image_url={{URL}}')
     }
-    const isValidUrl: boolean = validURL(image_url)
+    const isValidUrl: boolean = util.validURL(image_url)
     if(!isValidUrl) {
       return res.status(400).send('Invalid Url')
     }
     try {
-      const filteredPath = await filterImageFromURL(image_url)
-      deleteLocalFiles([filteredPath])
+      const filteredPath = await util.filterImageFromURL(image_url, 'greyscale')
+      util.deleteLocalFiles([filteredPath])
       res.status(200).send(filteredPath)
     } catch (error) {
       res.status(500).send({error, message: 'There was a problem filtering or saving your file. Make sure the image url provided is valid.'})
     }
   })
+
+  //route to optionally filter image and then upload to S3 bucket
+  //optional body param {filter: filter_type}
+  //  fiter_type - 'greyscale' | 'sepia'  no filter if not added
+  app.post("/filteredimage/upload", async (req: Request, res: Response) => {
+    const image_url  = req.query.image_url as string;
+    const { filter } = req.body
+
+    if (!image_url) {
+      return res.status(400).send('request must have contain a query string ?image_url={{URL}}')
+    }
+    const isValidUrl: boolean = util.validURL(image_url)
+    if(!isValidUrl) {
+      return res.status(400).send('Invalid Url')
+    }
+    try {
+      const filteredPath = await util.filterImageFromURL(image_url, filter)
+      const fileName = filteredPath.slice(filteredPath.lastIndexOf('/') + 1)
+      const response = await util.uploadToS3(fileName)
+      util.deleteLocalFiles([filteredPath])
+      res.status(200).send(response)
+    } catch (error) {
+      res.status(500).send({error, message: 'There was a problem filtering or saving your file. Make sure the url provided is valid.'})
+    }
+  })
+
+
 
   // Start the Server
   app.listen( port, () => {

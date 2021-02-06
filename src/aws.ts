@@ -1,8 +1,5 @@
-import fs from 'fs';
 import AWS = require('aws-sdk');
-import axios, { AxiosRequestConfig } from 'axios';
 import { config } from './util/config';
-const path = require('path');
 
 //global variables
 const c = config.dev;
@@ -58,32 +55,4 @@ export function getPutSignedUrl( key: string ){
       ContentType: 'image/jpeg'
     });
     return url;
-}
-
-//uploadToS3
- //Helper function to upload local file to S3 bukcet,
- // INPUTS
- //     fileName -string  name of local file
- //     path -string path to local file
-
- export async function uploadToS3 (fileName: string) {
-  return new Promise(async (resolve, reject) => {
-     try {
-         const preSignedPutUrl: string = getPutSignedUrl(fileName);
-         const _path: string = path.resolve(__dirname, 'tmp', fileName)
-         const file: Buffer = await fs.promises.readFile(_path)
-         const config: AxiosRequestConfig = {
-             method: 'put',
-             url: preSignedPutUrl,
-             headers: {
-                 'Content-Type': 'image/jpeg'
-             },
-             data: file,
-         }
-         await axios(config)
-         resolve(`Successfully uploaded ${fileName} to S3 Bucket`)
-     } catch (error) {
-         reject(error)
-     }
-  })  
 }
