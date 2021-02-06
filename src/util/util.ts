@@ -32,3 +32,18 @@ export async function deleteLocalFiles(files:Array<string>){
         fs.unlinkSync(file);
     }
 }
+
+//helper function to test url for validity
+//INPUT
+//  myURL - string URL to be tested
+//Returns
+// boolean
+export function validURL(myURL: string) {
+    var pattern: RegExp = new RegExp('^(https?:\\/\\/)?'+ // protocol
+    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|'+ // domain name
+    '((\\d{1,3}\\.){3}\\d{1,3}))'+ // ip (v4) address
+    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ //port
+    '(\\?[;&amp;a-z\\d%_.~+=-]*)?'+ // query string
+    '(\\#[-a-z\\d_]*)?$','i');
+    return pattern.test(myURL);
+ }
