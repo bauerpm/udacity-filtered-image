@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 require('dotenv').config();
 import bodyParser from 'body-parser';
 import * as util from './util/util';
-
+import * as aws from './aws'
 
 (async () => {
 
@@ -59,7 +59,12 @@ import * as util from './util/util';
     try {
       const filteredPath = await util.filterImageFromURL(image_url, filter)
       const fileName = filteredPath.slice(filteredPath.lastIndexOf('/') + 1)
-      const response = await util.uploadToS3(fileName)
+      if(process.env.AWS_PROFILE === 'DEPLOYED') {
+        const response = await util.uploadToS3(fileName)
+        util.deleteLocalFiles([filteredPath])
+        return res.status(200).send(response)
+      }
+      const response = await util.uploadToS3PresignedUrl(fileName)
       util.deleteLocalFiles([filteredPath])
       res.status(200).send(response)
     } catch (error) {
@@ -76,10 +81,12 @@ import * as util from './util/util';
       if(!file_name) {
         return res.status(400).send('File name is required to download image')
       }
-      const response:string = await util.downloadFromS3(file_name)
-  
-      res.status(200).send(response)
+
+      const preSignedGetURL:string = aws.getGetSignedUrl(file_name)
+      
+      res.status(200).send({url: preSignedGetURL})
     } catch (error) {
+      console.log(error)
       res.status(400).send(error)
     }
   })

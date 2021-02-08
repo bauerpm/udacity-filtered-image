@@ -67,7 +67,7 @@ export function validURL(myURL: string) {
  //     fileName -string  name of local file
  //     path -string path to local file
 
- export async function uploadToS3 (fileName: string) {
+ export async function uploadToS3PresignedUrl (fileName: string) {
     return new Promise(async (resolve, reject) => {
        try {
            const preSignedPutUrl: string = aws.getPutSignedUrl(fileName);
@@ -89,28 +89,25 @@ export function validURL(myURL: string) {
     })  
   }
 
-  //downloadFromS3
- //helper function to download a jpeg image from S3 bucket and save it to the desktop
- // @Params 
- //     -fileName -string name of the file in the S3 bucket to download
- export async function downloadFromS3 (fileName: string) {
-    return new Promise<string>(async (resolve, reject) => {
-     try {
-        const preSignedGetUrl: string = aws.getGetSignedUrl(fileName);
-        
-        const response: AxiosResponse = await axios.get(preSignedGetUrl, {
-            responseType: 'arraybuffer',
-        })
-
-        const homePath: string = os.homedir();
-        const _path: string = path.join(homePath, 'Desktop', fileName)
-        
-        fs.writeFileSync(_path, response.data)
-        resolve(`Successfully downloaded ${fileName} to the desktop`)
-
-     } catch (error) {
-         reject(`There was a problem downloading ${fileName}`)
-     }
-    })
- };
- 
+  export async function uploadToS3(fileName: string) {
+    return new Promise(async (resolve, reject) => {
+       try {
+           const _path: string = path.resolve(__dirname, 'tmp', fileName)
+           const file: Buffer = await fs.promises.readFile(_path)
+           const config = {
+               Bucket: process.env.AWS_MEDIA_BUCKET,
+               Key: fileName,
+               Body: file
+           }
+           aws.s3.putObject(config, (err, data) => {
+               if(err) {
+                   reject({message: 'S3 upload failed', error: err})
+               }
+               return resolve({message: `Successfully uploaded ${fileName} to S3 Bucket`, response: data})
+           });
+           
+       } catch (error) {
+           reject(error)
+       }
+    })  
+  }
