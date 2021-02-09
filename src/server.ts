@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 require('dotenv').config();
 import bodyParser from 'body-parser';
 import * as util from './util/util';
-
+import * as aws from './aws'
 
 (async () => {
 
@@ -44,7 +44,7 @@ import * as util from './util/util';
 
   //route to optionally filter image and then upload to S3 bucket
   //optional body param {filter: filter_type}
-  //  fiter_type - 'greyscale' | 'sepia'  no filter if not added
+  //  filter_type - 'greyscale' | 'sepia'  no filter if not added
   app.post("/filteredimage/upload", async (req: Request, res: Response) => {
     const image_url  = req.query.image_url as string;
     const { filter } = req.body
@@ -59,7 +59,12 @@ import * as util from './util/util';
     try {
       const filteredPath = await util.filterImageFromURL(image_url, filter)
       const fileName = filteredPath.slice(filteredPath.lastIndexOf('/') + 1)
-      const response = await util.uploadToS3(fileName)
+      if(process.env.AWS_PROFILE === 'DEPLOYED') {
+        const response = await util.uploadToS3(fileName)
+        util.deleteLocalFiles([filteredPath])
+        return res.status(200).send(response)
+      }
+      const response = await util.uploadToS3PresignedUrl(fileName)
       util.deleteLocalFiles([filteredPath])
       res.status(200).send(response)
     } catch (error) {
@@ -67,19 +72,20 @@ import * as util from './util/util';
     }
   })
 
-  // route to get image from public url, filter it, save to disk, then erase from disk.
-  // get /filteredimage?image_url={{URL}}
-  //route to get a specific image from s3 bucket
+  // route to get and return preSigned Get URl from S3.
+  //returns the presignedURL which can be used to download image from S3
   app.get( "/filteredimage/:file_name", async (req: Request, res: Response) => {
     const { file_name } = req.params;
     try {
       if(!file_name) {
         return res.status(400).send('File name is required to download image')
       }
-      const response:string = await util.downloadFromS3(file_name)
-  
-      res.status(200).send(response)
+
+      const preSignedGetURL:string = aws.getGetSignedUrl(file_name)
+      
+      res.status(200).send({url: preSignedGetURL})
     } catch (error) {
+      console.log(error)
       res.status(400).send(error)
     }
   })
