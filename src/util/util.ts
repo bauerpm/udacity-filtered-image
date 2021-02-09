@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import fs from 'fs';
 import Jimp = require('jimp');
 import * as aws from '../aws'
@@ -89,6 +89,10 @@ export function validURL(myURL: string) {
     })  
   }
 
+
+  //helper function to upload image to S3 in the deployed environment.
+  // INPUTS
+  //     fileName -string  name of local file
   export async function uploadToS3(fileName: string) {
     return new Promise(async (resolve, reject) => {
        try {
