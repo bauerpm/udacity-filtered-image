@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, Express } from 'express';
 require('dotenv').config();
 import bodyParser from 'body-parser';
 import * as util from './util/util';
@@ -7,24 +7,24 @@ import * as aws from './aws'
 (async () => {
 
   // Init the Express application
-  const app = express();
+  const app: Express = express();
 
   // Set the network port
-  const port = process.env.PORT || 8082;
+  const port: string | number = process.env.PORT || 8082;
   
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
   
   // Root Endpoint
   // Displays a simple message to the user
-  app.get( "/", async ( req, res ) => {
+  app.get( "/", async ( req: Request, res: Response ) => {
     res.send("try GET /filteredimage?image_url={{}}")
   } );
 
   // route to get image from public url, filter it, save to disk, then erase from disk.
   // get /filteredimage?image_url={{URL}}
   app.get("/filteredimage", async (req: Request, res: Response) => {
-    const image_url  = req.query.image_url as string;
+    const image_url: string = req.query.image_url as string;
 
     if (!image_url) {
       return res.status(400).send('request must have contain a query string ?image_url={{URL}}')
@@ -34,7 +34,7 @@ import * as aws from './aws'
       return res.status(400).send('Invalid Url')
     }
     try {
-      const filteredPath = await util.filterImageFromURL(image_url, 'greyscale')
+      const filteredPath: string = await util.filterImageFromURL(image_url, 'greyscale')
       util.deleteLocalFiles([filteredPath])
       res.status(200).send(filteredPath)
     } catch (error) {
@@ -46,8 +46,8 @@ import * as aws from './aws'
   //optional body param {filter: filter_type}
   //  filter_type - 'greyscale' | 'sepia'  no filter if not added
   app.post("/filteredimage/upload", async (req: Request, res: Response) => {
-    const image_url  = req.query.image_url as string;
-    const { filter } = req.body
+    const image_url: string = req.query.image_url as string;
+    const filter: string = req.body.filter
 
     if (!image_url) {
       return res.status(400).send('request must have contain a query string ?image_url={{URL}}')
@@ -57,8 +57,9 @@ import * as aws from './aws'
       return res.status(400).send('Invalid Url')
     }
     try {
-      const filteredPath = await util.filterImageFromURL(image_url, filter)
-      const fileName = filteredPath.slice(filteredPath.lastIndexOf('/') + 1)
+      const filteredPath: string = await util.filterImageFromURL(image_url, filter)
+      const fileName: string = filteredPath.slice(filteredPath.lastIndexOf('/') + 1)
+
       if(process.env.AWS_PROFILE === 'DEPLOYED') {
         const response = await util.uploadToS3(fileName)
         util.deleteLocalFiles([filteredPath])
@@ -68,7 +69,7 @@ import * as aws from './aws'
       util.deleteLocalFiles([filteredPath])
       res.status(200).send(response)
     } catch (error) {
-      res.status(500).send({error, message: 'There was a problem filtering or saving your file. Make sure the url provided is valid.'})
+      res.status(500).send({message: 'There was a problem filtering or saving your file. Make sure the url provided is valid.', error})
     }
   })
 

@@ -1,9 +1,9 @@
+import { PutObjectRequest } from 'aws-sdk/clients/s3';
 import axios, { AxiosRequestConfig } from 'axios';
 import fs from 'fs';
 import Jimp = require('jimp');
 import * as aws from '../aws'
 const path = require('path');
-const os = require('os')
 
 // filterImageFromURL
 // helper function to download, filter, and save the filtered image locally
@@ -15,15 +15,15 @@ const os = require('os')
 export async function filterImageFromURL(inputURL: string, filter?: string): Promise<string>{
     return new Promise( async (resolve, reject) => {
         try {
-            const photo = await Jimp.read(inputURL);
-            const outpath = '/tmp/filtered.'+Math.floor(Math.random() * 2000)+'.jpg';
+            const photo: Jimp = await Jimp.read(inputURL);
+            const outpath: string = '/tmp/filtered.'+Math.floor(Math.random() * 2000)+'.jpg';
             photo
             .resize(256, 256) // resize
             .quality(60) // set JPEG quality
             
             //handle optional filters
             if(filter) {
-                filter === 'sepia' && await photo.sepia();
+                filter === 'sepia' && photo.sepia();
                 filter === 'greyscale' && photo.greyscale();
             }
             photo.write(__dirname+outpath, (img)=>{
@@ -98,7 +98,7 @@ export function validURL(myURL: string) {
        try {
            const _path: string = path.resolve(__dirname, 'tmp', fileName)
            const file: Buffer = await fs.promises.readFile(_path)
-           const config = {
+           const config: PutObjectRequest = {
                Bucket: process.env.AWS_MEDIA_BUCKET,
                Key: fileName,
                Body: file
@@ -109,7 +109,6 @@ export function validURL(myURL: string) {
                }
                return resolve({message: `Successfully uploaded ${fileName} to S3 Bucket`, response: data})
            });
-           
        } catch (error) {
            reject(error)
        }
